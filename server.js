@@ -16,7 +16,11 @@ const PORT = process.env.PORT || 3000;
  * 3. Asigna la colección 'equipos' a req.collection usando req.db.collection().
  * 4. Llama a next().
  */
-// Tu código aquí
+app.use((req, res, next) => {
+    req.db = client.db('MundialDB');
+    req.collection = req.db.collection('equipos');
+    next();
+});
 
 /**
  * TODO: Implementar un endpoint GET /equipos
@@ -26,35 +30,61 @@ const PORT = process.env.PORT || 3000;
  * IMPORTANTE: Recuerda que las consultas a MongoDB son asincrónicas.
  */
 app.get('/equipos', async (req, res) => {
-    // Tu código aquí
+    try {
+        const resultados = await req.collection.find().toArray();
+        res.status(200).json(resultados);
+    } catch (error) {
+        res.status(500).json({ error: "Error al obtener los equipos" });
+    }
 });
 
 /**
  * TODO: Implementar un endpoint GET /equipos/buscar
  * 1. Debe obtener el parámetro de consulta 'tecnico' (req.query.tecnico).
  * 2. Debe usar expresiones regulares u operadores de MongoDB para buscar aquellos
- *    equipos cuyo 'tecnico' contenga el nombre buscado (insensible a mayúsculas: $regex / $options: 'i').
+ * equipos cuyo 'tecnico' contenga el nombre buscado (insensible a mayúsculas: $regex / $options: 'i').
  * 3. Debe retornar el arreglo filtrado con status 200.
  * IMPORTANTE: ¡Esta ruta debe ir ANTES que la ruta GET /equipos/:id!
  */
 app.get('/equipos/buscar', async (req, res) => {
-    // Tu código aquí
+    try {
+        const tecnico = req.query.tecnico;
+        const filtro = tecnico ? { tecnico: { $regex: tecnico, $options: 'i' } } : {};
+        const resultados = await req.collection.find(filtro).toArray();
+        res.status(200).json(resultados);
+    } catch (error) {
+        res.status(500).json({ error: "Error al buscar el equipo" });
+    }
 });
 
 /**
  * TODO: Implementar un endpoint GET /equipos/:id
  * 1. Debe obtener el id de los parámetros de la URL.
  * 2. Validar que el id sea un ObjectId válido usando ObjectId.isValid().
- *    Si no lo es, responde con status 400 y el mensaje { error: "ID inválido" }.
+ * Si no lo es, responde con status 400 y el mensaje { error: "ID inválido" }.
  * 3. Si es válido, conviértelo a ObjectId y busca ese documento en la colección.
  * 4. Si lo encuentra, retornarlo con status 200.
  * 5. Si no lo encuentra, retornar un status 404 y { error: "Equipo no encontrado" }.
  */
 app.get('/equipos/:id', async (req, res) => {
-    // Tu código aquí
+    try {
+        const id = req.params.id;
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "ID inválido" });
+        }
+
+        const equipo = await req.collection.findOne({ _id: new ObjectId(id) });
+
+        if (equipo) {
+            res.status(200).json(equipo);
+        } else {
+            res.status(404).json({ error: "Equipo no encontrado" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: "Error al procesar la solicitud" });
+    }
 });
-
-
 
 // Iniciar el servidor solo si este archivo se ejecuta directamente
 if (require.main === module) {
